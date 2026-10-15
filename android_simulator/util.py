@@ -175,7 +175,7 @@ def download(
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "tempera-air/0.2 (+https://github.com/YusuffEren/macOS-emulator)"},
+        headers={"User-Agent": "tempera-air/0.3 (+https://github.com/YusuffEren/macOS-emulator)"},
     )
     opener = urllib.request.build_opener(_SafeRedirectHandler(allow_http=allow_http))
     temp_path: Path | None = None

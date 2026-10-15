@@ -154,8 +154,10 @@ def _tool_candidates(sdk_root: Path, tool: str) -> list[Path]:
 def discover_toolchain(require_all: bool = True) -> Toolchain | None:
     sdk_root = default_sdk_root()
     tools = {name: which(name, _tool_candidates(sdk_root, name)) for name in ("sdkmanager", "avdmanager", "adb")}
-    custom_emulator = engine_root() / "current" / "emulator"
-    tools["emulator"] = custom_emulator.resolve() if custom_emulator.is_file() else which("emulator", _tool_candidates(sdk_root, "emulator"))
+    from .engine import custom_emulator
+
+    verified_emulator = custom_emulator()
+    tools["emulator"] = verified_emulator.resolve() if verified_emulator else which("emulator", _tool_candidates(sdk_root, "emulator"))
     missing = [name for name, path in tools.items() if path is None]
     if missing:
         if not require_all:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempera-air"
-version = "0.2.0"
+version = "0.3.0"
 description = "Clean-room open-source Android gaming environment for Apple Silicon Macs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,4 +30,6 @@ android-sim = "android_simulator.cli:main"
 include = ["android_simulator*"]
 
 [tool.setuptools.data-files]
-"share/tempera-air" = ["engine/engine.lock.json"]
+"share/tempera-air/engine" = ["engine/engine.lock.json"]
+"share/tempera-air/engine/manifests" = ["engine/manifests/emu-20250328.xml"]
+"share/tempera-air/engine/patches" = ["engine/patches/series.json"]

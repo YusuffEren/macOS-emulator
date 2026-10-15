@@ -14,6 +14,12 @@ The project is split deliberately:
 - `macos/TemperaAir/` is a thin SwiftUI consumer of that interface.
 - `engine/` pins AEMU, gfxstream, and MoltenVK without vendoring their sources.
 
+The engine lock freezes all 76 repositories in the matching Android
+superproject snapshot, not only the three headline components. A custom engine
+is selected only when its build receipt and emulator SHA-256 match the committed
+lock; otherwise the CLI reports the reason and uses the SDK emulator fallback.
+See `engine/README.md` for the Apple Silicon build procedure.
+
 Examples:
 
 ```bash

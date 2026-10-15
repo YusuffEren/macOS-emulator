@@ -1,19 +1,45 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "lock_id": "aemu-35.6.3-tempera.1",
   "target": "macos-arm64",
+  "manifest": {
+    "repository": "https://android.googlesource.com/platform/manifest",
+    "branch": "emu-master-dev",
+    "commit": "1a75ee5c54d3b3161516ae27b6769a70e0ffcfca",
+    "superproject_commit": "230c45eb81fbc87b94d887073b040ee24139cce9",
+    "frozen_overlay": "manifests/emu-20250328.xml",
+    "frozen_overlay_sha256": "8eed82a225e1a18a4f20b5b6672876c9df45e04b405ffa5b2f975d0f82fa6771",
+    "project_count": 76
+  },
   "components": {
     "aemu": {
       "repository": "https://android.googlesource.com/platform/external/qemu",
+      "path": "external/qemu",
       "commit": "ae9d18d2b6261179fbd57fffec720a04f7bfb053"
     },
     "gfxstream": {
-      "repository": "https://github.com/google/gfxstream.git",
-      "commit": "5960b81c137b15f74b132fa6b95f5cb326002807"
+      "repository": "https://android.googlesource.com/platform/hardware/google/gfxstream",
+      "path": "hardware/google/gfxstream",
+      "commit": "d047a57228332d995d36600792fa9ccc26cf8ae6",
+      "compatibility": "Pinned by the same Android superproject snapshot as AEMU"
     },
     "moltenvk": {
       "repository": "https://github.com/KhronosGroup/MoltenVK.git",
-      "commit": "5189f8de86ec365860f63bf1da736815cfaea5cd"
+      "path": "external/tempera-moltenvk",
+      "commit": "5189f8de86ec365860f63bf1da736815cfaea5cd",
+      "build": ["./fetchDependencies --macos", "make macos"],
+      "staged_icd": "lib64/vulkan/Tempera_MoltenVK_icd.json"
     }
+  },
+  "patch_series": {
+    "path": "patches/series.json",
+    "sha256": "671e09884c6aecf658799b947d15de92871f7c44c78ac7f6ca42e7a4f6cbfaec"
+  },
+  "build": {
+    "minimum_free_gib": 80,
+    "aemu_command": ["./android/rebuild.sh", "--gfxstream"],
+    "distribution": "external/qemu/objs/distribution/emulator",
+    "executable": "emulator"
   },
   "capability_policy": {
     "preferred_renderer": "gfxstream-moltenvk",

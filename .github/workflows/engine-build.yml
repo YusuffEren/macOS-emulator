@@ -1,0 +1,42 @@
+name: engine-macos-arm64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-macos-arm64
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS, ARM64, tempera-engine]
+    timeout-minutes: 360
+    env:
+      TEMPERA_ENGINE_BUILD_ROOT: ${{ runner.temp }}/tempera-engine-build
+      TEMPERA_ENGINE_INSTALL_ROOT: ${{ runner.temp }}/tempera-engine-install
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Apple Silicon host and source lock
+        run: |
+          test "$(uname -m)" = "arm64"
+          python3 engine/verify-lock.py
+          command -v repo
+          xcodebuild -version
+      - name: Build pinned engine
+        run: ./engine/build-macos-arm64.sh
+      - name: Package engine
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open("engine/engine.lock.json"))["lock_id"])')"
+          tar -czf "$RUNNER_TEMP/$version.tar.gz" -C "$TEMPERA_ENGINE_INSTALL_ROOT" "$version"
+          shasum -a 256 "$RUNNER_TEMP/$version.tar.gz" > "$RUNNER_TEMP/$version.tar.gz.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tempera-engine-macos-arm64
+          path: |
+            ${{ runner.temp }}/aemu-35.6.3-tempera.1.tar.gz
+            ${{ runner.temp }}/aemu-35.6.3-tempera.1.tar.gz.sha256
+          retention-days: 14
+          compression-level: 0

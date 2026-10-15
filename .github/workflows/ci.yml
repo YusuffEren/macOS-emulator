@@ -26,8 +26,12 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --no-deps .
       - run: ./scripts/ci.sh
+      - run: python engine/verify-lock.py
       - if: matrix.os == 'macos-15' && matrix.python == '3.13'
-        run: swift build --package-path macos/TemperaAir
+        run: |
+          test "$(uname -m)" = "arm64"
+          bash -n engine/build-macos-arm64.sh
+          swift build --package-path macos/TemperaAir
 
   shellcheck:
     runs-on: ubuntu-latest

@@ -17,7 +17,8 @@ Status values are `implemented`, `foundation`, `engine-blocked`, `evidence-neede
 | Disk report and cleanup | implemented | Managed roots only, explicit confirmation |
 | BYOK AI action safety gate | foundation | Guarded action executor; provider planner not bundled |
 | SwiftUI manager | foundation | Thin JSON/NDJSON CLI consumer |
-| gfxstream + MoltenVK engine | engine-blocked | Source pins and Mac build preflight supplied |
+| Reproducible AEMU engine source/build pipeline | implemented | 76-project frozen manifest, compatible gfxstream pin, MoltenVK build, receipts and atomic install |
+| Built gfxstream + MoltenVK engine binary | evidence-needed | Manual Apple Silicon build workflow supplied; binary has not been produced on this Windows host |
 | Vulkan, V-Sync, Retina and 240 FPS validation | evidence-needed | Must be tested on Apple Silicon hardware |
 | BlueStacks package internals | foundation | Official 5.21.790.7505 PKG acquired, hashed and statically inventoried; macOS runtime evidence remains open |
 | Macro import/replay and cross-instance input sync | foundation | Guarded versioned macro replay implemented; live recording and cross-instance fan-out require macOS input bridge |
