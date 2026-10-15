@@ -174,7 +174,7 @@ Android simulator setup complete.
 
 Open a new terminal, then run:
   android-sim doctor
-  android-sim start "$AVD_NAME" --wifi-ssid "JadenAndroid" --wifi-password "change-this-password"
+  android-sim start "$AVD_NAME" --wifi-ssid "TemperaAir" --wifi-password "change-this-password"
 
 Install an APK:
   android-sim install ~/Downloads/app.apk

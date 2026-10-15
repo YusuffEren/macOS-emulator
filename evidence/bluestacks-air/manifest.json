@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "product": "BlueStacks Air",
+  "version": "5.21.790.7505",
+  "downloaded_at": "2026-10-15T19:14:28Z",
+  "source_api": "https://cloud.bluestacks.com/api/getdownloadnow?platform=mac",
+  "source_url": "https://ak-build.bluestacks.com/public/app-player/mac/nxt_mac2/5.21.790.7505/426aabd288b04f58a8200b751e9bcbcf/BlueStacksInstaller_5.21.790.7505.pkg",
+  "artifact": {
+    "path": "BlueStacksInstaller_5.21.790.7505.pkg",
+    "bytes": 1029855185,
+    "sha256": "137accd707aa21028abf57412820d803fe550b07a1d5110ada291b80e10877aa",
+    "format": "pkg"
+  },
+  "rea": {
+    "artifact_summary_evidence_id": "ev_7a9617192f1492281e5c8f2dcb0085d76b36d7d390fcb67c210158705ac6186c",
+    "artifact_inspection_evidence_id": "ev_2ff73765f082bcc55dc2e81b23840705732066da4ca0ef006fb32dbdf4876e67",
+    "inventory_evidence_id": "ev_926e661783fec97001d72b8ddc2d253364c5e8e379781d1e988680e2f619002b",
+    "main_executable_sha256": "4f8294a8528fc65dcf7f5c93a552fa42782d40987949ea14e0beb2003d890817"
+  },
+  "extraction": {
+    "method": "Windows bsdtar, no target execution",
+    "archive_entries": 10,
+    "payload_entries": 2523,
+    "unsafe_paths": 0,
+    "main_bundle_files": 2145,
+    "main_bundle_expanded_bytes": 2882922187
+  }
+}

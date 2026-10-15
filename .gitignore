@@ -8,3 +8,6 @@ dist/
 .pytest_cache/
 .coverage
 *.log
+evidence/bluestacks-air/*.pkg
+evidence/bluestacks-air/pkg-root/
+evidence/bluestacks-air/extracted/

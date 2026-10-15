@@ -10,11 +10,25 @@ import sys
 import tempfile
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
 from .errors import AndroidSimError
+
+
+_MACHINE_OUTPUT: ContextVar[bool] = ContextVar("android_sim_machine_output", default=False)
+
+
+@contextmanager
+def machine_output(enabled: bool = True):
+    token = _MACHINE_OUTPUT.set(enabled)
+    try:
+        yield
+    finally:
+        _MACHINE_OUTPUT.reset(token)
 
 
 @dataclass(frozen=True)
@@ -45,13 +59,14 @@ def run(
     argv = tuple(str(arg) for arg in args)
     if not quiet:
         print(f"+ {quote_command(argv)}", file=sys.stderr)
+    effective_capture = capture or _MACHINE_OUTPUT.get()
     completed = subprocess.run(
         argv,
         check=False,
         text=True,
         input=input_text,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.PIPE if capture else None,
+        stdout=subprocess.PIPE if effective_capture else None,
+        stderr=subprocess.PIPE if effective_capture else None,
         env=dict(env) if env is not None else None,
         cwd=str(cwd) if cwd else None,
     )
@@ -160,7 +175,7 @@ def download(
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "android-simulator/0.1 (+https://github.com/Jadenfix/android-simulator)"},
+        headers={"User-Agent": "tempera-air/0.2 (+https://github.com/YusuffEren/macOS-emulator)"},
     )
     opener = urllib.request.build_opener(_SafeRedirectHandler(allow_http=allow_http))
     temp_path: Path | None = None

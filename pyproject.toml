@@ -3,18 +3,17 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jadenfix-android-simulator"
-version = "0.1.0"
-description = "Reproducible Android Emulator environments for Apple Silicon Macs"
+name = "tempera-air"
+version = "0.2.0"
+description = "Clean-room open-source Android gaming environment for Apple Silicon Macs"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "Jadenfix" }]
+license = "MIT"
+authors = [{ name = "Tempera Air contributors" }]
 keywords = ["android", "emulator", "apple-silicon", "macos", "avd", "adb"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: MacOS X",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -29,3 +28,6 @@ android-sim = "android_simulator.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["android_simulator*"]
+
+[tool.setuptools.data-files]
+"share/tempera-air" = ["engine/engine.lock.json"]

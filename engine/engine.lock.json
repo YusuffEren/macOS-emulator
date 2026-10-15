@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "target": "macos-arm64",
+  "components": {
+    "aemu": {
+      "repository": "https://android.googlesource.com/platform/external/qemu",
+      "commit": "ae9d18d2b6261179fbd57fffec720a04f7bfb053"
+    },
+    "gfxstream": {
+      "repository": "https://github.com/google/gfxstream.git",
+      "commit": "5960b81c137b15f74b132fa6b95f5cb326002807"
+    },
+    "moltenvk": {
+      "repository": "https://github.com/KhronosGroup/MoltenVK.git",
+      "commit": "5189f8de86ec365860f63bf1da736815cfaea5cd"
+    }
+  },
+  "capability_policy": {
+    "preferred_renderer": "gfxstream-moltenvk",
+    "fallback_renderers": ["host", "angle", "swiftshader_indirect"],
+    "fps_presets": [30, 60, 90, 120, 144, 240],
+    "grpc": {"listen": "127.0.0.1", "token_required": true}
+  }
+}

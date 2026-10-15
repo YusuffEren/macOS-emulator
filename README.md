@@ -1,4 +1,37 @@
-# Android Simulator for Apple Silicon
+# Tempera Air
+
+Tempera Air extends the original Android Simulator with a versioned JSON CLI,
+multi-instance operations, per-instance gaming settings, personal library and
+control profiles, guarded automation, pinned open-source engine sources, and a
+native macOS 14+ SwiftUI client. It is a clean-room, personal-use project: it
+does not contain BlueStacks code, branding, commercial services, attestation
+spoofing, or anti-cheat bypasses.
+
+The project is split deliberately:
+
+- `android_simulator/` owns every durable state transition.
+- `contracts/cli-response.schema.json` is the stable machine interface.
+- `macos/TemperaAir/` is a thin SwiftUI consumer of that interface.
+- `engine/` pins AEMU, gfxstream, and MoltenVK without vendoring their sources.
+
+Examples:
+
+```bash
+android-sim --json engine status
+android-sim --json settings set android-sim-play fps=120 renderer=gfxstream vsync=true
+android-sim --json instance clone android-sim-play second-account
+android-sim --json library add com.example.game --title "My Game" --favorite
+android-sim --json controls import ./my-game-controls.json
+android-sim --json macro import ./daily-actions.json
+android-sim --json macro run daily-actions
+android-sim --json disk report
+```
+
+See `docs/FEATURE_MATRIX.md` for implemented, hardware-gated, and intentionally
+excluded capabilities. The macOS acceptance script must pass before Vulkan,
+high-FPS, microphone, camera, or gamepad parity is claimed.
+
+## Original project foundation
 
 A reproducible, command-line-managed Android environment for an M-series Mac.
 It uses the **official Android Emulator** as the virtualization engine and adds
@@ -63,8 +96,8 @@ See [Architecture](docs/ARCHITECTURE.md) for the full model.
 ## One-command setup
 
 ```bash
-git clone git@github.com:Jadenfix/android-simulator.git
-cd android-simulator
+git clone https://github.com/YusuffEren/macOS-emulator.git
+cd macOS-emulator
 ./scripts/bootstrap-macos.sh
 ```
 
@@ -101,7 +134,7 @@ Install tools without downloading a multi-gigabyte system image yet:
 
 ```bash
 android-sim start android-sim-play \
-  --wifi-ssid "JadenAndroid" \
+  --wifi-ssid "TemperaAir" \
   --wifi-password "replace-this-password"
 ```
 

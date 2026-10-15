@@ -23,7 +23,7 @@ smoke:
 	./scripts/smoke-macos.sh
 
 lint:
-	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh; else echo 'shellcheck not installed; skipped'; fi
+	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh engine/*.sh; else echo 'shellcheck not installed; skipped'; fi
 
 install:
 	./scripts/install-local.sh

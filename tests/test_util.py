@@ -5,10 +5,17 @@ import unittest
 from pathlib import Path
 
 from android_simulator.errors import AndroidSimError
-from android_simulator.util import download, parse_version, safe_download_name, validate_sha256
+from android_simulator.util import download, machine_output, parse_version, run, safe_download_name, validate_sha256
 
 
 class UtilTests(unittest.TestCase):
+    def test_machine_output_forces_subprocess_capture(self) -> None:
+        import sys
+
+        with machine_output():
+            result = run([sys.executable, "-c", "print('structured')"], capture=False, quiet=True)
+        self.assertEqual(result.stdout.strip(), "structured")
+
     def test_parse_version(self) -> None:
         self.assertEqual(parse_version("Android emulator version 36.5.12.0"), (36, 5, 12, 0))
         self.assertEqual(parse_version("unknown"), ())

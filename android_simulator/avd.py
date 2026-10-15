@@ -3,6 +3,8 @@ from __future__ import annotations
 import platform
 import re
 import shlex
+import shutil
+import socket
 import subprocess
 import time
 import uuid
@@ -211,6 +213,119 @@ def create_fresh_identity(
     )
 
 
+def clone_avd(toolchain: Toolchain, source_name: str, new_name: str) -> dict:
+    """Clone a stopped managed AVD, including its writable data and snapshots."""
+    validate_avd_name(source_name)
+    validate_avd_name(new_name)
+    if source_name == new_name:
+        raise AndroidSimError("Clone name must differ from the source name")
+    if _running_serial_for_avd(toolchain, source_name):
+        raise AndroidSimError("Stop the source AVD before cloning it")
+    if new_name in list_avds(toolchain):
+        raise AndroidSimError(f"AVD {new_name!r} already exists")
+    source_dir = avd_home() / f"{source_name}.avd"
+    destination_dir = avd_home() / f"{new_name}.avd"
+    source_ini = avd_home() / f"{source_name}.ini"
+    destination_ini = avd_home() / f"{new_name}.ini"
+    if not source_dir.is_dir() or not source_ini.is_file():
+        raise AndroidSimError(f"AVD files for {source_name!r} are incomplete")
+    try:
+        shutil.copytree(source_dir, destination_dir)
+        ini = _read_ini(source_ini)
+        ini["path"] = str(destination_dir)
+        ini["path.rel"] = f"avd/{new_name}.avd"
+        _write_ini(destination_ini, ini)
+        config_path = destination_dir / "config.ini"
+        config = _read_ini(config_path)
+        config["AvdId"] = new_name
+        config["avd.ini.displayname"] = new_name
+        _write_ini(config_path, config)
+        metadata = load_metadata(source_name)
+        metadata.update(
+            {
+                "name": new_name,
+                "instance_uuid": str(uuid.uuid4()),
+                "cloned_from": source_name,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "config_path": str(config_path),
+            }
+        )
+        save_json(instance_metadata_path(new_name), metadata)
+    except Exception:
+        if destination_dir.exists():
+            shutil.rmtree(destination_dir)
+        destination_ini.unlink(missing_ok=True)
+        instance_metadata_path(new_name).unlink(missing_ok=True)
+        raise
+    return metadata
+
+
+def rename_avd(toolchain: Toolchain, source_name: str, new_name: str) -> dict:
+    """Rename a stopped managed AVD without copying its disk image."""
+    validate_avd_name(source_name)
+    validate_avd_name(new_name)
+    if source_name == new_name:
+        raise AndroidSimError("New instance name must differ from the current name")
+    if _running_serial_for_avd(toolchain, source_name):
+        raise AndroidSimError("Stop the source AVD before renaming it")
+    if new_name in list_avds(toolchain):
+        raise AndroidSimError(f"AVD {new_name!r} already exists")
+    source_dir = avd_home() / f"{source_name}.avd"
+    destination_dir = avd_home() / f"{new_name}.avd"
+    source_ini = avd_home() / f"{source_name}.ini"
+    destination_ini = avd_home() / f"{new_name}.ini"
+    source_metadata = instance_metadata_path(source_name)
+    destination_metadata = instance_metadata_path(new_name)
+    source_backup = source_metadata.with_suffix(".json.v0.bak")
+    destination_backup = destination_metadata.with_suffix(".json.v0.bak")
+    if not source_dir.is_dir() or not source_ini.is_file() or not source_metadata.is_file():
+        raise AndroidSimError(f"Managed AVD files for {source_name!r} are incomplete")
+    metadata = load_metadata(source_name)
+    moved_backup = False
+    try:
+        source_dir.rename(destination_dir)
+        source_ini.rename(destination_ini)
+        ini = _read_ini(destination_ini)
+        ini["path"] = str(destination_dir)
+        ini["path.rel"] = f"avd/{new_name}.avd"
+        _write_ini(destination_ini, ini)
+        config_path = destination_dir / "config.ini"
+        config = _read_ini(config_path)
+        config["AvdId"] = new_name
+        config["avd.ini.displayname"] = new_name
+        _write_ini(config_path, config)
+        metadata.update({"name": new_name, "renamed_from": source_name, "config_path": str(config_path)})
+        save_json(destination_metadata, metadata)
+        if source_backup.exists():
+            source_backup.rename(destination_backup)
+            moved_backup = True
+        source_metadata.unlink()
+    except Exception:
+        destination_metadata.unlink(missing_ok=True)
+        if moved_backup and destination_backup.exists():
+            destination_backup.rename(source_backup)
+        if destination_ini.exists() and not source_ini.exists():
+            destination_ini.rename(source_ini)
+        if destination_dir.exists() and not source_dir.exists():
+            destination_dir.rename(source_dir)
+        raise
+    return metadata
+
+
+def snapshot(toolchain: Toolchain, serial: str, operation: str, name: str | None = None) -> str:
+    if operation not in {"list", "save", "load", "delete"}:
+        raise AndroidSimError(f"Unsupported snapshot operation: {operation}")
+    args = ["emu", "avd", "snapshot", operation]
+    if operation != "list":
+        if not name or not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", name):
+            raise AndroidSimError("A valid snapshot name is required")
+        args.append(name)
+    result = adb_module.adb(toolchain, serial, args, check=False, quiet=True)
+    if result.returncode != 0 or "KO:" in result.stdout:
+        raise AndroidSimError(result.stderr.strip() or result.stdout.strip() or "Snapshot operation failed")
+    return result.stdout.strip()
+
+
 def emulator_version(toolchain: Toolchain) -> tuple[int, ...]:
     result = run([toolchain.emulator, "-version"], check=False, quiet=True)
     return parse_version(result.stdout + "\n" + result.stderr)
@@ -231,6 +346,17 @@ def choose_port(toolchain: Toolchain) -> int:
         if port not in used:
             return port
     raise AndroidSimError("All Android Emulator console ports from 5554 through 5682 are occupied")
+
+
+def choose_grpc_port() -> int:
+    for port in range(8554, 8683):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+            return port
+    raise AndroidSimError("All loopback gRPC ports from 8554 through 8682 are occupied")
 
 
 def _wifi_netsim_args(ssid: str, password: str | None) -> str:
@@ -263,6 +389,7 @@ def start_avd(
     wait: bool = True,
     timeout_seconds: int = 240,
     extra_args: list[str] | None = None,
+    announce: bool = True,
 ) -> str:
     validate_avd_name(name)
     if name not in list_avds(toolchain):
@@ -276,7 +403,24 @@ def start_avd(
         )
 
     port = choose_port(toolchain)
+    grpc_port = choose_grpc_port()
     serial = f"emulator-{port}"
+    from .settings import get as get_settings
+
+    runtime = get_settings(name)
+    config_path = avd_home() / f"{name}.avd" / "config.ini"
+    config = _read_ini(config_path)
+    config.update(
+        {
+            "hw.cpu.ncore": str(runtime["cpu_cores"]),
+            "hw.ramSize": str(runtime["ram_mb"]),
+            "hw.lcd.width": str(runtime["width"]),
+            "hw.lcd.height": str(runtime["height"]),
+            "hw.lcd.density": str(runtime["dpi"]),
+            "hw.camera.back": str(runtime["camera"]),
+        }
+    )
+    _write_ini(config_path, config)
     command = [
         str(toolchain.emulator),
         "-avd",
@@ -284,14 +428,21 @@ def start_avd(
         "-port",
         str(port),
         "-gpu",
-        "auto",
+        str(runtime["renderer"]),
+        "-grpc",
+        str(grpc_port),
+        "-grpc-use-token",
+        "-idle-grpc-timeout",
+        "300",
     ]
+    if runtime["fps"]:
+        command.extend(["-refresh-rate", str(runtime["fps"])])
     if cold:
         command.append("-no-snapshot-load")
     if wipe:
         command.append("-wipe-data")
     if headless:
-        command.extend(["-no-window", "-no-boot-anim"])
+        command.append("-no-window")
     if no_audio:
         command.append("-no-audio")
     if wifi_ssid:
@@ -339,8 +490,10 @@ def start_avd(
             raise AndroidSimError(f"{exc}\nEmulator log: {log_path}") from exc
         # Ensure simulated Wi-Fi is enabled after the framework is ready.
         adb_module.shell(toolchain, serial, ["svc", "wifi", "enable"], check=False, quiet=True)
-    print(f"Started {name} as {serial}")
-    print(f"Emulator log: {log_path}")
+    if announce:
+        print(f"Started {name} as {serial}")
+        print(f"Emulator gRPC: 127.0.0.1:{grpc_port} (token required)")
+        print(f"Emulator log: {log_path}")
     return serial
 
 

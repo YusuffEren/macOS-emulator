@@ -61,6 +61,27 @@ def logs_root() -> Path:
     return state_root() / "logs"
 
 
+def library_path() -> Path:
+    return state_root() / "library.json"
+
+
+def controls_root() -> Path:
+    return state_root() / "controls"
+
+
+def macros_root() -> Path:
+    return state_root() / "macros"
+
+
+def recordings_root() -> Path:
+    return state_root() / "recordings"
+
+
+def engine_root() -> Path:
+    explicit = os.environ.get("TEMPERA_ENGINE_HOME")
+    return Path(explicit).expanduser().resolve() if explicit else state_root() / "engines"
+
+
 def avd_home() -> Path:
     explicit = os.environ.get("ANDROID_AVD_HOME")
     return Path(explicit).expanduser().resolve() if explicit else Path.home() / ".android" / "avd"
@@ -132,10 +153,9 @@ def _tool_candidates(sdk_root: Path, tool: str) -> list[Path]:
 
 def discover_toolchain(require_all: bool = True) -> Toolchain | None:
     sdk_root = default_sdk_root()
-    tools = {
-        name: which(name, _tool_candidates(sdk_root, name))
-        for name in ("sdkmanager", "avdmanager", "adb", "emulator")
-    }
+    tools = {name: which(name, _tool_candidates(sdk_root, name)) for name in ("sdkmanager", "avdmanager", "adb")}
+    custom_emulator = engine_root() / "current" / "emulator"
+    tools["emulator"] = custom_emulator.resolve() if custom_emulator.is_file() else which("emulator", _tool_candidates(sdk_root, "emulator"))
     missing = [name for name, path in tools.items() if path is None]
     if missing:
         if not require_all:
