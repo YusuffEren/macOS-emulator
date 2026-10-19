@@ -514,6 +514,28 @@ def stop_device(toolchain: Toolchain, serial: str) -> None:
         raise AndroidSimError(result.stderr.strip() or f"Failed to stop {serial}")
 
 
+def stop_all(toolchain: Toolchain) -> list[str]:
+    """Stop every running emulator; returns the serials that were stopped."""
+    serials = [
+        device.serial
+        for device in adb_module.list_devices(toolchain)
+        if device.serial.startswith("emulator-") and device.state == "device"
+    ]
+    if not serials:
+        raise AndroidSimError("No running emulators found")
+    stopped: list[str] = []
+    failures: list[str] = []
+    for serial in serials:
+        try:
+            stop_device(toolchain, serial)
+            stopped.append(serial)
+        except AndroidSimError as exc:
+            failures.append(f"{serial}: {exc}")
+    if failures:
+        raise AndroidSimError("Failed to stop some emulators: " + "; ".join(failures))
+    return stopped
+
+
 def _running_serial_for_avd(toolchain: Toolchain, name: str) -> str | None:
     for device in adb_module.list_devices(toolchain):
         if not device.serial.startswith("emulator-") or device.state != "device":

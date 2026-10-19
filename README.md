@@ -37,7 +37,9 @@ android-sim --json macro run daily-grind --all-running
 android-sim --json planner add --name my-planner --endpoint https://planner.example.com/plan --api-key-env MY_PLANNER_KEY
 android-sim --json planner plan my-planner --goal "open settings" --save-as open-settings
 android-sim --json backup create android-sim-play --notes "before migration"
+android-sim --json backup prune --keep 3 --yes
 android-sim --json backup restore android-sim-play-20260101T120000Z-ab12cd --name phone-restored
+android-sim --json stop --all
 android-sim --json settings set android-sim-play eco_mode=true
 android-sim --json instance arrange phone-a phone-b phone-c --columns 2
 android-sim --json disk report

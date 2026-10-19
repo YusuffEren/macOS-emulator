@@ -207,3 +207,27 @@ def delete(backup_id: str, *, confirmed: bool = False) -> dict[str, Any]:
         raise AndroidSimError(f"Refusing to delete path outside managed backups: {target}")
     shutil.rmtree(target)
     return {"deleted": backup_id, "bytes": manifest["bytes"]}
+
+
+def prune(*, keep: int = 3, confirmed: bool = False) -> dict[str, Any]:
+    """Delete the oldest backups per instance, keeping the newest `keep`."""
+    if keep < 1:
+        raise AndroidSimError("keep must be at least 1")
+    if not confirmed:
+        raise AndroidSimError("Backup pruning is destructive; re-run with --yes")
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for entry in list_backups():
+        if entry.get("invalid"):
+            continue
+        groups.setdefault(str(entry["instance"]), []).append(entry)
+    deleted: list[str] = []
+    kept: list[str] = []
+    reclaimed = 0
+    for entries in groups.values():
+        # list_backups returns newest first.
+        kept.extend(str(entry["backup_id"]) for entry in entries[:keep])
+        for entry in entries[keep:]:
+            result = delete(str(entry["backup_id"]), confirmed=True)
+            deleted.append(str(entry["backup_id"]))
+            reclaimed += int(result["bytes"])
+    return {"keep": keep, "deleted": deleted, "kept": kept, "reclaimed_bytes": reclaimed}

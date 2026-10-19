@@ -129,6 +129,46 @@ class BackupArrangementTests(unittest.TestCase):
         self.assertEqual(listed[0]["instance"], "phone")
         self.assertEqual(listed[0]["bytes"], created["bytes"])
 
+    def test_prune_keeps_newest_per_instance(self):
+        _make_instance(self.root, "phone")
+        created = [backup.create(_toolchain(), "phone") for _ in range(3)]
+        # list_backups sorts by created_at; rewrite manifests with distinct
+        # timestamps so the order is deterministic despite sub-second creation.
+        for index, entry in enumerate(created):
+            manifest_path = self.root / "state" / "backups" / entry["backup_id"] / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["created_at"] = f"2026-01-0{index + 1}T00:00:00+00:00"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaises(AndroidSimError):
+            backup.prune(keep=2)
+        result = backup.prune(keep=2, confirmed=True)
+        self.assertEqual(len(result["deleted"]), 1)
+        self.assertEqual(result["deleted"], [created[0]["backup_id"]])
+        self.assertEqual(len(result["kept"]), 2)
+        remaining = {item["backup_id"] for item in backup.list_backups()}
+        self.assertEqual(remaining, {created[1]["backup_id"], created[2]["backup_id"]})
+
+    def test_stop_all_stops_every_running_emulator(self):
+        from android_simulator import adb as adb_module
+
+        devices = [
+            adb_module.Device("emulator-5554", "device", "m1"),
+            adb_module.Device("emulator-5556", "device", "m2"),
+            adb_module.Device("emulator-5558", "offline", "m3"),
+        ]
+        stopped: list[str] = []
+        with patch("android_simulator.avd.adb_module.list_devices", return_value=devices), patch(
+            "android_simulator.avd.stop_device", side_effect=lambda toolchain, serial: stopped.append(serial)
+        ):
+            result = avd.stop_all(_toolchain())
+        self.assertEqual(result, ["emulator-5554", "emulator-5556"])
+        self.assertEqual(stopped, ["emulator-5554", "emulator-5556"])
+
+    def test_stop_all_without_running_emulators(self):
+        with patch("android_simulator.avd.adb_module.list_devices", return_value=[]):
+            with self.assertRaises(AndroidSimError):
+                avd.stop_all(_toolchain())
+
     def test_eco_mode_caps_refresh_rate(self):
         runtime = settings.validate({"fps": 120, "eco_mode": True})
         self.assertEqual(settings.effective_refresh_rate(runtime), 30)

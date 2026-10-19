@@ -71,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     stop = sub.add_parser("stop", help="Stop a running emulator")
+    stop.add_argument("--all", action="store_true", help="Stop every running emulator")
     _add_serial(stop)
 
     delete = sub.add_parser("delete", help="Delete an AVD and its persistent data")
@@ -297,6 +298,9 @@ def build_parser() -> argparse.ArgumentParser:
     backup_delete = backup_sub.add_parser("delete")
     backup_delete.add_argument("backup_id")
     backup_delete.add_argument("--yes", action="store_true")
+    backup_prune = backup_sub.add_parser("prune")
+    backup_prune.add_argument("--keep", type=int, default=3, help="Newest backups to keep per instance")
+    backup_prune.add_argument("--yes", action="store_true")
 
     return parser
 
@@ -354,13 +358,15 @@ def command_main(args: argparse.Namespace) -> int:
             data = planner.plan(args.name, args.goal, save_as=args.save_as, force=args.force)
         print(json.dumps(data, sort_keys=True))
         return 0
-    if args.command == "backup" and args.backup_command in {"list", "verify", "delete"}:
+    if args.command == "backup" and args.backup_command in {"list", "verify", "delete", "prune"}:
         if args.backup_command == "list":
             data = backup.list_backups()
         elif args.backup_command == "verify":
             data = backup.verify(args.backup_id)
-        else:
+        elif args.backup_command == "delete":
             data = backup.delete(args.backup_id, confirmed=args.yes)
+        else:
+            data = backup.prune(keep=args.keep, confirmed=args.yes)
         print(json.dumps(data, sort_keys=True))
         return 0
     if args.command == "instance" and args.instance_command == "arrange":
@@ -491,6 +497,10 @@ def command_main(args: argparse.Namespace) -> int:
         )
         return 0
     if args.command == "stop":
+        if args.all:
+            stopped = avd.stop_all(toolchain)
+            print(json.dumps({"stopped": stopped}, sort_keys=True))
+            return 0
         serial = adb_module.select_device(toolchain, args.serial).serial
         avd.stop_device(toolchain, serial)
         return 0
