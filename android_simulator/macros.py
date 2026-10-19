@@ -64,13 +64,7 @@ def list_macros() -> list[dict[str, Any]]:
     return result
 
 
-def run_macro(
-    toolchain: Toolchain,
-    serial: str,
-    name: str,
-    *,
-    confirmed: bool = False,
-) -> dict[str, Any]:
+def _prepare(name: str, *, confirmed: bool) -> list[agent.Action]:
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", name):
         raise AndroidSimError("Invalid macro name")
     path = macros_root() / f"{name}.json"
@@ -85,6 +79,52 @@ def run_macro(
     ]
     if not confirmed and any(agent.requires_confirmation(action) for action in actions):
         raise AndroidSimError("Macro contains sensitive actions; inspect it and re-run with --yes")
+    return actions
+
+
+def run_macro(
+    toolchain: Toolchain,
+    serial: str,
+    name: str,
+    *,
+    confirmed: bool = False,
+) -> dict[str, Any]:
+    actions = _prepare(name, confirmed=confirmed)
     for action in actions:
         agent.execute(toolchain, serial, action, confirmed=confirmed)
-    return {"name": name, "executed_steps": len(actions)}
+    return {"name": name, "serial": serial, "executed_steps": len(actions)}
+
+
+def run_macro_fanout(
+    toolchain: Toolchain,
+    serials: list[str],
+    name: str,
+    *,
+    confirmed: bool = False,
+    continue_on_error: bool = False,
+) -> dict[str, Any]:
+    """Replay one macro sequentially across several running instances."""
+    if not serials:
+        raise AndroidSimError("Fan-out requires at least one target serial")
+    if len(set(serials)) != len(serials):
+        raise AndroidSimError("Fan-out received duplicate target serials")
+    for serial in serials:
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", serial):
+            raise AndroidSimError(f"Invalid ADB serial: {serial!r}")
+    actions = _prepare(name, confirmed=confirmed)
+    results: list[dict[str, Any]] = []
+    for serial in serials:
+        try:
+            for action in actions:
+                agent.execute(toolchain, serial, action, confirmed=confirmed)
+            results.append({"serial": serial, "executed_steps": len(actions), "error": None})
+        except AndroidSimError as exc:
+            if not continue_on_error:
+                raise AndroidSimError(f"Fan-out failed on {serial}: {exc}") from exc
+            results.append({"serial": serial, "executed_steps": 0, "error": str(exc)})
+    return {
+        "name": name,
+        "targets": results,
+        "succeeded": sum(1 for item in results if item["error"] is None),
+        "failed": sum(1 for item in results if item["error"] is not None),
+    }

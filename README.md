@@ -30,6 +30,10 @@ android-sim --json library add com.example.game --title "My Game" --favorite
 android-sim --json controls import ./my-game-controls.json
 android-sim --json macro import ./daily-actions.json
 android-sim --json macro run daily-actions
+android-sim --json macro record start --name daily-grind
+android-sim --json agent tap --arguments '{"x":540,"y":1200}' --description "open menu"
+android-sim --json macro record stop
+android-sim --json macro run daily-grind --all-running
 android-sim --json backup create android-sim-play --notes "before migration"
 android-sim --json backup restore android-sim-play-20260101T120000Z-ab12cd --name phone-restored
 android-sim --json settings set android-sim-play eco_mode=true

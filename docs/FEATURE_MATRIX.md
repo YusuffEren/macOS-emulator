@@ -21,7 +21,7 @@ Status values are `implemented`, `foundation`, `engine-blocked`, `evidence-neede
 | Built gfxstream + MoltenVK engine binary | evidence-needed | Manual Apple Silicon build workflow supplied; binary has not been produced on this Windows host |
 | Vulkan, V-Sync, Retina and 240 FPS validation | evidence-needed | Must be tested on Apple Silicon hardware |
 | BlueStacks package internals | foundation | Official 5.21.790.7505 PKG acquired, hashed and statically inventoried; macOS runtime evidence remains open |
-| Macro import/replay and cross-instance input sync | foundation | Guarded versioned macro replay implemented; live recording and cross-instance fan-out require macOS input bridge |
+| Macro import/replay and cross-instance input sync | implemented | Guarded macro replay, action-level recording sessions, and multi-instance fan-out with per-target error reporting; raw touch-stream capture still requires the macOS input bridge |
 | Backup/restore, eco FPS and instance arrangement | implemented | Full stopped-instance backup/restore with manifest size verification; per-instance `eco_mode` caps launch FPS at 30; grid planner persists window offsets applied on next start (live window placement pending macOS verification) |
 | Prime, NowBux, rewards, ads and BlueStacks assets | excluded | Commercial/brand services |
 | Device/attestation spoofing and anti-cheat bypass | excluded | Security boundary |

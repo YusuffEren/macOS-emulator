@@ -48,6 +48,13 @@ def _audit(serial: str, action: Action, status: str, *, confirmation_required: b
         handle.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def _record_step(action: Action) -> None:
+    """Append an executed action to the open recording session, if any."""
+    from . import recording
+
+    recording.record_step(action)
+
+
 def execute(toolchain: Toolchain, serial: str, action: Action, *, confirmed: bool = False) -> dict[str, Any]:
     if action.name not in ALLOWED_ACTIONS:
         raise AndroidSimError(f"Unsupported agent action: {action.name}")
@@ -71,7 +78,9 @@ def execute(toolchain: Toolchain, serial: str, action: Action, *, confirmed: boo
         import time
         time.sleep(float(args.get("seconds", 1)))
         _audit(serial, action, "executed", confirmation_required=confirmation_required)
+        _record_step(action)
         return {"action": action.name, "executed": True}
     adb_module.shell(toolchain, serial, command)
     _audit(serial, action, "executed", confirmation_required=confirmation_required)
+    _record_step(action)
     return {"action": action.name, "executed": True}

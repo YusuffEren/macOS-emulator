@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from . import adb as adb_module
-from . import agent, apps, avd, arrangement, backup, controls, engine, library, macros, maintenance, media, network, settings
+from . import agent, apps, avd, arrangement, backup, controls, engine, library, macros, maintenance, media, network, recording, settings
 from .contract import Response, emit
 from .config import DEFAULT_ARCH, DEFAULT_NAME, PROFILE_TAGS, discover_toolchain
 from .doctor import print_doctor
@@ -254,6 +254,17 @@ def build_parser() -> argparse.ArgumentParser:
     macro_run = macro_sub.add_parser("run")
     macro_run.add_argument("name")
     macro_run.add_argument("--yes", action="store_true")
+    macro_run.add_argument("--serials", help="Comma-separated ADB serials for cross-instance fan-out")
+    macro_run.add_argument("--all-running", action="store_true", help="Fan out to every running emulator")
+    macro_run.add_argument("--continue-on-error", action="store_true", help="Keep replaying on remaining targets after a failure")
+    macro_record = macro_sub.add_parser("record", help="Record executed agent actions into a macro")
+    macro_record_sub = macro_record.add_subparsers(dest="record_command", required=True)
+    record_start = macro_record_sub.add_parser("start")
+    record_start.add_argument("--name", required=True)
+    record_start.add_argument("--notes", default="")
+    macro_record_sub.add_parser("status")
+    macro_record_sub.add_parser("stop")
+    macro_record_sub.add_parser("cancel")
 
     backup_parser = sub.add_parser("backup", help="Create, verify, and restore full instance backups")
     backup_sub = backup_parser.add_subparsers(dest="backup_command", required=True)
@@ -296,6 +307,17 @@ def command_main(args: argparse.Namespace) -> int:
         return 0
     if args.command == "macro" and args.macro_command in {"list", "import"}:
         data = macros.list_macros() if args.macro_command == "list" else macros.import_macro(args.path)
+        print(json.dumps(data, sort_keys=True))
+        return 0
+    if args.command == "macro" and args.macro_command == "record":
+        if args.record_command == "start":
+            data = recording.start(args.name, notes=args.notes)
+        elif args.record_command == "status":
+            data = recording.status()
+        elif args.record_command == "stop":
+            data = recording.stop()
+        else:
+            data = recording.cancel()
         print(json.dumps(data, sort_keys=True))
         return 0
     if args.command == "backup" and args.backup_command in {"list", "verify", "delete"}:
@@ -562,6 +584,34 @@ def command_main(args: argparse.Namespace) -> int:
         print(json.dumps(agent.execute(toolchain, serial, action, confirmed=args.yes), sort_keys=True))
         return 0
     if args.command == "macro":
+        if args.serials or args.all_running:
+            if args.serials and args.all_running:
+                raise AndroidSimError("Choose either --serials or --all-running, not both")
+            if args.all_running:
+                serials = [
+                    device.serial
+                    for device in adb_module.list_devices(toolchain)
+                    if device.state == "device" and device.serial.startswith("emulator-")
+                ]
+                if not serials:
+                    raise AndroidSimError("No running emulators found for fan-out")
+            else:
+                serials = [item.strip() for item in args.serials.split(",") if item.strip()]
+                if not serials:
+                    raise AndroidSimError("--serials did not contain any serial")
+            print(
+                json.dumps(
+                    macros.run_macro_fanout(
+                        toolchain,
+                        serials,
+                        args.name,
+                        confirmed=args.yes,
+                        continue_on_error=args.continue_on_error,
+                    ),
+                    sort_keys=True,
+                )
+            )
+            return 0
         serial = adb_module.select_device(toolchain, args.serial).serial
         print(json.dumps(macros.run_macro(toolchain, serial, args.name, confirmed=args.yes), sort_keys=True))
         return 0
