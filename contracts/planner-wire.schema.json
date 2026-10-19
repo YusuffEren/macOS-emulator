@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tempera.local/schemas/android-sim-planner-wire-v1.json",
+  "title": "android-sim BYOK planner wire contract",
+  "description": "Request sent to a user-registered planner endpoint and the response it must return. Planned steps are validated against the macro contract before they can be replayed.",
+  "type": "object",
+  "$defs": {
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "arguments"],
+      "properties": {
+        "action": {"enum": ["tap", "type", "swipe", "wait", "back", "home"]},
+        "arguments": {"type": "object"},
+        "description": {"type": "string"}
+      }
+    }
+  },
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "goal", "model", "allowed_actions", "action_arguments"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "goal": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "model": {"type": "string"},
+        "allowed_actions": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        },
+        "action_arguments": {
+          "type": "object",
+          "additionalProperties": {"type": "object"}
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "steps"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "items": {"$ref": "#/$defs/step"}
+        }
+      }
+    }
+  }
+}

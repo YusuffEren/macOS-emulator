@@ -34,6 +34,8 @@ android-sim --json macro record start --name daily-grind
 android-sim --json agent tap --arguments '{"x":540,"y":1200}' --description "open menu"
 android-sim --json macro record stop
 android-sim --json macro run daily-grind --all-running
+android-sim --json planner add --name my-planner --endpoint https://planner.example.com/plan --api-key-env MY_PLANNER_KEY
+android-sim --json planner plan my-planner --goal "open settings" --save-as open-settings
 android-sim --json backup create android-sim-play --notes "before migration"
 android-sim --json backup restore android-sim-play-20260101T120000Z-ab12cd --name phone-restored
 android-sim --json settings set android-sim-play eco_mode=true

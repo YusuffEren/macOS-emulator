@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from . import adb as adb_module
-from . import agent, apps, avd, arrangement, backup, controls, engine, library, macros, maintenance, media, network, recording, settings
+from . import agent, apps, avd, arrangement, backup, controls, engine, library, macros, maintenance, media, network, planner, recording, settings
 from .contract import Response, emit
 from .config import DEFAULT_ARCH, DEFAULT_NAME, PROFILE_TAGS, discover_toolchain
 from .doctor import print_doctor
@@ -266,6 +266,23 @@ def build_parser() -> argparse.ArgumentParser:
     macro_record_sub.add_parser("stop")
     macro_record_sub.add_parser("cancel")
 
+    planner_parser = sub.add_parser("planner", help="Manage BYOK AI planner profiles and generate guarded macros")
+    planner_sub = planner_parser.add_subparsers(dest="planner_command", required=True)
+    planner_add = planner_sub.add_parser("add")
+    planner_add.add_argument("--name", required=True)
+    planner_add.add_argument("--endpoint", required=True, help="HTTPS endpoint (HTTP allowed on loopback only)")
+    planner_add.add_argument("--api-key-env", default="", help="Environment variable holding the API key; the key is never stored")
+    planner_add.add_argument("--model", default="")
+    planner_add.add_argument("--timeout", type=int, default=60)
+    planner_sub.add_parser("list")
+    planner_remove = planner_sub.add_parser("remove")
+    planner_remove.add_argument("name")
+    planner_plan = planner_sub.add_parser("plan", help="Ask the planner for a plan and save it as a macro")
+    planner_plan.add_argument("name")
+    planner_plan.add_argument("--goal", required=True)
+    planner_plan.add_argument("--save-as", help="Macro name; defaults to a slug of the goal")
+    planner_plan.add_argument("--force", action="store_true", help="Replace an existing macro with the same name")
+
     backup_parser = sub.add_parser("backup", help="Create, verify, and restore full instance backups")
     backup_sub = backup_parser.add_subparsers(dest="backup_command", required=True)
     backup_create = backup_sub.add_parser("create")
@@ -318,6 +335,23 @@ def command_main(args: argparse.Namespace) -> int:
             data = recording.stop()
         else:
             data = recording.cancel()
+        print(json.dumps(data, sort_keys=True))
+        return 0
+    if args.command == "planner":
+        if args.planner_command == "add":
+            data = planner.add(
+                args.name,
+                args.endpoint,
+                api_key_env=args.api_key_env,
+                model=args.model,
+                timeout_seconds=args.timeout,
+            )
+        elif args.planner_command == "list":
+            data = planner.list_planners()
+        elif args.planner_command == "remove":
+            data = planner.remove(args.name)
+        else:
+            data = planner.plan(args.name, args.goal, save_as=args.save_as, force=args.force)
         print(json.dumps(data, sort_keys=True))
         return 0
     if args.command == "backup" and args.backup_command in {"list", "verify", "delete"}:
