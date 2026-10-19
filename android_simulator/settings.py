@@ -12,6 +12,8 @@ from .util import load_json, save_json
 SETTINGS_VERSION = 1
 RENDERERS = {"auto", "host", "gfxstream", "angle", "swiftshader_indirect"}
 FPS_VALUES = {30, 60, 90, 120, 144, 240}
+ECO_FPS_CAP = 30
+WINDOW_UNSET = -1
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": SETTINGS_VERSION,
@@ -22,11 +24,14 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "height": 1920,
     "dpi": 420,
     "fps": 60,
+    "eco_mode": False,
     "vsync": True,
     "renderer": "auto",
     "camera": "virtualscene",
     "microphone": False,
     "locale": "en-US",
+    "window_x": WINDOW_UNSET,
+    "window_y": WINDOW_UNSET,
 }
 
 
@@ -52,8 +57,22 @@ def validate(values: dict[str, Any]) -> dict[str, Any]:
         raise AndroidSimError("camera must be none, webcam0, or virtualscene")
     if not isinstance(result["vsync"], bool) or not isinstance(result["microphone"], bool):
         raise AndroidSimError("vsync and microphone must be booleans")
+    if not isinstance(result["eco_mode"], bool):
+        raise AndroidSimError("eco_mode must be true or false")
+    for key in ("window_x", "window_y"):
+        value = int(result[key])
+        if value != WINDOW_UNSET and not 0 <= value <= 65535:
+            raise AndroidSimError(f"{key} must be {WINDOW_UNSET} (unset) or between 0 and 65535")
     result["version"] = SETTINGS_VERSION
     return result
+
+
+def effective_refresh_rate(runtime: dict[str, Any]) -> int:
+    """Return the launch refresh rate, capped by eco mode to save host resources."""
+    fps = int(runtime["fps"])
+    if runtime.get("eco_mode"):
+        return min(fps, ECO_FPS_CAP)
+    return fps
 
 
 def get(name: str) -> dict[str, Any]:

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from . import adb as adb_module
-from . import agent, apps, avd, controls, engine, library, macros, maintenance, media, network, settings
+from . import agent, apps, avd, arrangement, backup, controls, engine, library, macros, maintenance, media, network, settings
 from .contract import Response, emit
 from .config import DEFAULT_ARCH, DEFAULT_NAME, PROFILE_TAGS, discover_toolchain
 from .doctor import print_doctor
@@ -170,6 +170,15 @@ def build_parser() -> argparse.ArgumentParser:
     batch_start.add_argument("names", nargs="+")
     batch_start.add_argument("--headless", action="store_true")
     batch_start.add_argument("--timeout", type=int, default=240)
+    instance_arrange = instance_sub.add_parser("arrange", help="Plan or apply a grid layout for instance windows")
+    instance_arrange.add_argument("names", nargs="+")
+    instance_arrange.add_argument("--columns", type=int, help="Grid column count; defaults to a near-square layout")
+    instance_arrange.add_argument("--cell-width", type=int, default=arrangement.DEFAULT_CELL_WIDTH)
+    instance_arrange.add_argument("--cell-height", type=int, default=arrangement.DEFAULT_CELL_HEIGHT)
+    instance_arrange.add_argument("--margin", type=int, default=arrangement.DEFAULT_MARGIN)
+    instance_arrange.add_argument("--origin-x", type=int, default=arrangement.DEFAULT_ORIGIN_X)
+    instance_arrange.add_argument("--origin-y", type=int, default=arrangement.DEFAULT_ORIGIN_Y)
+    instance_arrange.add_argument("--dry-run", action="store_true", help="Show the plan without saving it")
 
     snapshot = sub.add_parser("snapshot", help="Manage quick-boot snapshots")
     _add_serial(snapshot)
@@ -246,6 +255,21 @@ def build_parser() -> argparse.ArgumentParser:
     macro_run.add_argument("name")
     macro_run.add_argument("--yes", action="store_true")
 
+    backup_parser = sub.add_parser("backup", help="Create, verify, and restore full instance backups")
+    backup_sub = backup_parser.add_subparsers(dest="backup_command", required=True)
+    backup_create = backup_sub.add_parser("create")
+    backup_create.add_argument("name")
+    backup_create.add_argument("--notes", default="", help="Free-form note stored in the backup manifest")
+    backup_sub.add_parser("list")
+    backup_verify = backup_sub.add_parser("verify")
+    backup_verify.add_argument("backup_id")
+    backup_restore = backup_sub.add_parser("restore")
+    backup_restore.add_argument("backup_id")
+    backup_restore.add_argument("--name", help="Restore under a new instance name")
+    backup_delete = backup_sub.add_parser("delete")
+    backup_delete.add_argument("backup_id")
+    backup_delete.add_argument("--yes", action="store_true")
+
     return parser
 
 
@@ -274,6 +298,27 @@ def command_main(args: argparse.Namespace) -> int:
         data = macros.list_macros() if args.macro_command == "list" else macros.import_macro(args.path)
         print(json.dumps(data, sort_keys=True))
         return 0
+    if args.command == "backup" and args.backup_command in {"list", "verify", "delete"}:
+        if args.backup_command == "list":
+            data = backup.list_backups()
+        elif args.backup_command == "verify":
+            data = backup.verify(args.backup_id)
+        else:
+            data = backup.delete(args.backup_id, confirmed=args.yes)
+        print(json.dumps(data, sort_keys=True))
+        return 0
+    if args.command == "instance" and args.instance_command == "arrange":
+        placements = arrangement.plan(
+            args.names,
+            columns=args.columns,
+            cell_width=args.cell_width,
+            cell_height=args.cell_height,
+            margin=args.margin,
+            origin_x=args.origin_x,
+            origin_y=args.origin_y,
+        )
+        print(json.dumps(arrangement.apply(placements, dry_run=args.dry_run), sort_keys=True))
+        return 0
     if args.command == "library":
         if args.library_command == "list":
             data = library.list_apps()
@@ -294,6 +339,13 @@ def command_main(args: argparse.Namespace) -> int:
         return 0 if print_doctor() else 1
 
     toolchain = _toolchain()
+
+    if args.command == "backup":
+        if args.backup_command == "create":
+            print(json.dumps(backup.create(toolchain, args.name, notes=args.notes), sort_keys=True))
+        else:
+            print(json.dumps(backup.restore(toolchain, args.backup_id, name=args.name), sort_keys=True))
+        return 0
 
     if args.command == "disk":
         running_names = {

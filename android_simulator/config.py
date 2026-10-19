@@ -73,6 +73,10 @@ def macros_root() -> Path:
     return state_root() / "macros"
 
 
+def backups_root() -> Path:
+    return state_root() / "backups"
+
+
 def recordings_root() -> Path:
     return state_root() / "recordings"
 

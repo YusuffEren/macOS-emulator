@@ -374,6 +374,15 @@ def _wifi_netsim_args(ssid: str, password: str | None) -> str:
     return shlex.join(values)
 
 
+def window_args(runtime: dict) -> list[str]:
+    """Emulator launch arguments that position the window, when configured."""
+    x = int(runtime.get("window_x", -1))
+    y = int(runtime.get("window_y", -1))
+    if x < 0 or y < 0:
+        return []
+    return ["-window-x", str(x), "-window-y", str(y)]
+
+
 def start_avd(
     toolchain: Toolchain,
     *,
@@ -405,7 +414,7 @@ def start_avd(
     port = choose_port(toolchain)
     grpc_port = choose_grpc_port()
     serial = f"emulator-{port}"
-    from .settings import get as get_settings
+    from .settings import effective_refresh_rate, get as get_settings
 
     runtime = get_settings(name)
     config_path = avd_home() / f"{name}.avd" / "config.ini"
@@ -435,8 +444,10 @@ def start_avd(
         "-idle-grpc-timeout",
         "300",
     ]
-    if runtime["fps"]:
-        command.extend(["-refresh-rate", str(runtime["fps"])])
+    refresh_rate = effective_refresh_rate(runtime)
+    if refresh_rate:
+        command.extend(["-refresh-rate", str(refresh_rate)])
+    command.extend(window_args(runtime))
     if cold:
         command.append("-no-snapshot-load")
     if wipe:
