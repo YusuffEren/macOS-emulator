@@ -16,7 +16,7 @@ Status values are `implemented`, `foundation`, `engine-blocked`, `evidence-neede
 | Microphone/camera controls | foundation | Settings and permission UX require macOS verification |
 | Disk report and cleanup | implemented | Managed roots only, explicit confirmation |
 | BYOK AI action safety gate | implemented | User-registered HTTPS planner profiles with env-held keys; plans are validated against the macro contract and replayed only through the existing confirmation gates (`docs/PLANNER_CONTRACT.md`) |
-| SwiftUI manager | foundation | Thin JSON/NDJSON CLI consumer |
+| SwiftUI manager | foundation | Thin JSON/NDJSON CLI consumer; surfaces instances, backups, macro recording, fan-out replay, and grid arrangement; runtime acceptance on macOS hardware pending |
 | Reproducible AEMU engine source/build pipeline | implemented | 76-project frozen manifest, compatible gfxstream pin, MoltenVK build, receipts and atomic install |
 | Built gfxstream + MoltenVK engine binary | evidence-needed | Manual Apple Silicon build workflow supplied; binary has not been produced on this Windows host |
 | Vulkan, V-Sync, Retina and 240 FPS validation | evidence-needed | Must be tested on Apple Silicon hardware |
